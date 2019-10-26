@@ -1,0 +1,29 @@
+# Files will be stored in /tmp directory 
+cd /tmp
+
+# Download qMRLab v2.3.0 
+wget -O qMRLab-2.3.0.zip https://github.com/qMRLab/qMRLab/archive/v2.3.0.zip
+unzip qMRLab-2.3.0.zip -d /tmp/qMRLab
+
+# Download example dataset  
+wget -O data.zip https://osf.io/4fztd/download/
+unzip data.zip -d $HOME/data
+
+# Add /tmp and subfolders in the Octave search path. 
+octave --no-gui --eval "addpath(genpath('/tmp')); savepath;"
+
+# Install SoS kernel 
+python -m sos_notebook.install
+
+jupyter nbextension enable --py --sys-prefix ipyleaflet
+
+git clone https://github.com/ipython-contrib/jupyter_contrib_nbextensions.git
+pip install -e jupyter_contrib_nbextensions
+jupyter contrib nbextension install --user
+jupyter nbextension enable hide_input/main
+jupyter nbextension enable init_cell/main
+python -m pip install statsmodels
+pip install jupyter_contrib_nbextensions
+jupyter contrib nbextension install --user
+jupyter nbextension enable codefolding/main
+jupyter nbextension enable collapsible_headings/main
