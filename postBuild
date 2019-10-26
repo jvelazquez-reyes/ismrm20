@@ -1,13 +1,16 @@
+# Install Python dependencies.
+pip install -r requirements.txt
+
 # Files will be stored in /tmp directory 
 cd /tmp
 
 # Download qMRLab v2.3.0 
 wget -O qMRLab-2.3.0.zip https://github.com/qMRLab/qMRLab/archive/v2.3.0.zip
-unzip qMRLab-2.3.0.zip -d /tmp/qMRLab
+unzip qMRLab-2.3.0.zip -d /tmp
 
 # Download example dataset  
 wget -O data.zip https://osf.io/4fztd/download/
-unzip data.zip -d $HOME/data
+unzip data.zip -d $HOME
 
 # Add /tmp and subfolders in the Octave search path. 
 octave --no-gui --eval "addpath(genpath('/tmp')); savepath;"
