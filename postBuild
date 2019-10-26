@@ -1,6 +1,3 @@
-# Install Python dependencies.
-pip install -r requirements.txt
-
 # Files will be stored in /tmp directory 
 cd /tmp
 
@@ -14,6 +11,19 @@ unzip data.zip -d $HOME
 
 # Add /tmp and subfolders in the Octave search path. 
 octave --no-gui --eval "addpath(genpath('/tmp')); savepath;"
+pip install sos \
+sos-notebook \
+sos-python \
+sos-bash \
+sos-matlab==0.18.3 \
+sos-ruby \
+sos-sas \
+sos-julia \
+sos-javascript \
+sos-r \
+plotly \
+plotly_express \
+dash
 
 # Install SoS kernel 
 python -m sos_notebook.install
