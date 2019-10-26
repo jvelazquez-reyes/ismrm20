@@ -1,9 +1,10 @@
 # Files will be stored in /tmp directory 
 cd /tmp
 
-# Download qMRLab v2.3.0 
-wget -O qMRLab-2.3.0.zip https://github.com/qMRLab/qMRLab/archive/v2.3.0.zip
-unzip qMRLab-2.3.0.zip -d /tmp
+# Download qMRLab 2b2b9d
+# BIDS module is available with this hash 
+git clone -b master https://github.com/qMRLab/qMRLab.git --depth 1
+git reset --hard 2b2b9d82d2138d85076948632483573aa9ff748a
 
 # Download example dataset  
 wget -O data.zip https://osf.io/4fztd/download/
