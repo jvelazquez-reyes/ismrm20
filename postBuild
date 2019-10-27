@@ -11,7 +11,9 @@ wget -O data.zip https://osf.io/4fztd/download/
 unzip data.zip -d $HOME
 
 # Add /tmp and subfolders in the Octave search path. 
-octave --no-gui --eval "addpath(genpath('/tmp')); savepath;"
+# We need to add bids path explicitly for Octave.
+octave --no-gui --eval "addpath(genpath('/tmp')); addpath('/tmp/qMRLab/External/imtool3D_td/External/bids-matlab'); addpath('/tmp/qMRLab/External/imtool3D_td/External/bids-matlab/+bids'); savepath;"
+
 pip install sos \
 sos-notebook \
 sos-python \
