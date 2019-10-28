@@ -1,0 +1,32 @@
+
+{
+	"BIDSSuffix": "VFA",
+	"qMRLabModel": "vfa_t1",
+	"REQUIREDEntities": "fa",
+	"routeAction": "merge",
+	"singleton": "1",
+	"dataFieldName": "VFAData",
+	"protMap": {
+		
+		"foreach": "fa",
+		
+		"FlipAngle":{
+		"qMRLabProt": "VFAData",
+		"scale": 1,
+		"order": "col_first",
+		"index": "1"
+		},
+		
+		"RepetitionTimeExcitation":{
+		"qMRLabProt": "VFAData",
+		"scale": 0.001,
+		"order": "col_first",
+		"index": "2"
+		}
+	},
+	"outputMap": {
+		"M0": "M0map",
+		"T1": "T1map"
+	}
+	
+}
