@@ -46,11 +46,15 @@ for sub_iter = 1:length(BIDS_subjects)
          
              files = bids.query(BIDS,'data','sub',BIDS_subjects(sub_iter),cell2mat(extra),extras(extra_iter),'type',BIDS_types(type_iter));
              metas = bids.query(BIDS,'metadata','sub',BIDS_subjects(sub_iter),cell2mat(extra),extras(extra_iter),'type',BIDS_types(type_iter));
+             
              [Model,data] = qMRLabBIDSmapper(files,metas,protomapper);
+             
              disp(['Fitting ' Model.ModelName ' for ' 'sub-' BIDS_subjects{sub_iter} cell2mat(extra) ' ' extras{extra_iter}])
              FitResults = FitData(data,Model,0);
+             
+             
              FitResultsSave_nii(FitResults,files{1},curSubDir);
-             renameForBIDS(BIDS_subjects{sub_iter},curSubDir,protomapper,Model.xnames,cell2mat(extra),extras{extra_iter});
+             renameMapsSaveJsons(BIDS,files,BIDS_subjects{sub_iter},curSubDir,protomapper,Model.xnames,cell2mat(extra),extras{extra_iter});
              
              
              % FIT HERE BUT MANAGE OUTPUT FOLDERS AND OUTPUT NAMES PROPERLY
@@ -205,23 +209,178 @@ end
 
 end
 
-function renameForBIDS(curSubName,fileDir,protomapper,xnames,varargin) 
+function renameMapsSaveJsons(BIDS,files,curSubName,fileDir,protomapper,xnames,varargin) 
 
 for ii=1:length(xnames)
 f = dir(fullfile(fileDir,[xnames{ii} '.nii.gz']));
 
 if ~isempty(f) 
     
-    if nargin>4
-        newname = ['sub-' curSubName '_' varargin{1} '-' varargin{2} '_' protomapper.outputMap.(xnames{ii}) '.nii.gz'];
+    if nargin>6
+        newname = ['sub-' curSubName '_' varargin{1} '-' varargin{2} '_' protomapper.outputMap.(xnames{ii})];
     else
-        newname = ['sub-' curSubName '_' protomapper.outputMap.(xnames{ii}) '.nii.gz'];
+        newname = ['sub-' curSubName '_' protomapper.outputMap.(xnames{ii})];
 
     end
 
-   movefile([fileDir filesep f.name],[fileDir filesep newname]);
-   
+   movefile([fileDir filesep f.name],[fileDir filesep newname '.nii.gz']);
+   provenance = getProvenance(BIDS,files,protomapper);
+   savejson('',provenance,[fileDir filesep newname '.json']);
+    
 end
 end 
+
+f = dir(fullfile(fileDir,'FitResults.mat'));
+if ~isempty(f) 
+    newname = newname(1:(max(strfind(newname,'_'))-1));
+    movefile([fileDir filesep f.name],[fileDir filesep newname '_FitResults.mat']);
+end
+
+end
+
+function FitProvenance = getProvenance(BIDS,files,protomapper)
+
+            FitProvenance = struct();
+            FitProvenance.BasedOn = regexprep(files,BIDS.dir(1:max(strfind(BIDS.dir,filesep))),'','ignorecase');
+            FitProvenance.EstimationSoftwareName = 'qMRLab';
+            FitProvenance.EstimationSoftwareVer  = qMRLabVer;
+            FitProvenance.EstimationReference = protomapper.estimationPaper;
+            FitProvenance.EstimationAlgorithm = protomapper.estimationAlgorithm;
+  
+          
+            if moxunit_util_platform_is_octave
+                
+                FitProvenance.EstimationDate = strftime('%Y-%m-%d %H:%M:%S', localtime (time ()));
+                [FitProvenance.EstimationSoftwareEnv, FitProvenance.MaxSize, FitProvenance.Endian] = computer;
+                FitProvenance.EstimationSoftwareEnvDetails = GetOSDetails();
+                FitProvenance.EstimationSoftwareLang = ['Octave ' OCTAVE_VERSION()];
+                Fitprovenance.EstimationSoftwareLangDetails = pkg('list');
+                Fitprovenance.EstimationSoftwareLangDetails.More = octave_config_info;
+                
+            else 
+
+                FitProvenance.EstimationDate = datetime(now,'ConvertFrom','datenum');
+                [FitProvenance.EstimationSoftwareEnv, FitProvenance.MaxSize, FitProvenance.Endian] = computer; 
+                FitProvenance.EstimationSoftwareEnvDetails = GetOSDetails();
+                FitProvenance.EstimationSoftwareLang = ['Matlab ' version('-release')];
+                FitProvenance.EstimationSoftwareLangDetails = ver;
+
+            end
+            
+end
+
+function details = GetOSDetails
+  
+    type = computer;
+
+    if moxunit_util_platform_is_octave
+        
+        if ~isempty(strfind(type,'apple')) % OSX Octave 
+            
+            [st,out] = unix('cat /etc/os-release');
+            
+            if ~st
+                details = out;
+            else
+                details = [];
+            end
+            
+        end
+        
+        if ~isempty(strfind(type,'linux')) % GNU Linux Octave 
+            
+            [st,out] = unix('system_profiler SPSoftwareDataType');
+            
+            if ~st
+                details = out;
+            else
+                details = [];
+            end
+            
+        end
+        
+        if ~isempty(strfind(type,'windows')) % GNU Linux Octave 
+            
+            [st,out] = system('winver');
+            
+            if ~st
+                details = out;
+            else
+                details = [];
+            end
+            
+        end
+        
+    else % MATLAB 
+        
+        if strncmp(type,'MAC',3)
+            
+            [st,out] = unix('system_profiler SPSoftwareDataType');
+            
+            if ~st
+                details = rmUserInfoOSX(out);
+             
+            else
+                details = [];
+            end
+            
+        end
+        
+        if strncmp(type,'GLNX',4)
+            
+            [st,out] = unix('cat /etc/os-release');
+            
+            if ~st
+                details = out;
+            else
+                details = [];
+            end
+            
+        end
+        
+        if ~isempty(strfind(type,'WIN'))
+            
+            [st,out] = system('winver');
+            
+            if ~st
+                details = out;
+            else
+                details = [];
+            end
+            
+        end
+        
+        
+    end
+end
+
+function out = rmUserInfoOSX(ipt)
+
+    usridx = strfind(ipt,'User Name');
+    pcidx = strfind(ipt,'Computer Name');
+    nwlines = strfind(ipt,char(10));
+   
+    if ~isempty(usridx)
+    ipt = hideUser(usridx,nwlines,ipt);
+    end
+    
+    if ~isempty(pcidx)
+    ipt = hideUser(pcidx,nwlines,ipt);
+    end
+
+    out = ipt;
+
+end
+
+function out = hideUser(idx,nwlines,ipt)
+
+    tmp = nwlines - idx;
+    tmp = min(tmp(tmp>0));
+    interval = idx:idx+min(tmp)-1;
+
+    ipt(interval) = '*';
+    ipt(max(interval)+1) = char(10);
+
+    out = ipt;
 
 end

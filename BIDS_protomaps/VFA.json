@@ -27,6 +27,10 @@
 	"outputMap": {
 		"M0": "M0map",
 		"T1": "T1map"
-	}
-	
+	},
+
+	"estimationPaper": "Fram, E.K. et al. (1987), Magn Reson Med, 5:201-208",
+	"estimationAlgorithm": "src/Models_Functions/MTV/Compute_M0_T1_OnSPGR.m"
+   
+
 }
