@@ -255,7 +255,6 @@ function FitProvenance = getProvenance(BIDS,files,protomapper)
                 FitProvenance.EstimationSoftwareEnvDetails = GetOSDetails();
                 FitProvenance.EstimationSoftwareLang = ['Octave ' OCTAVE_VERSION()];
                 Fitprovenance.EstimationSoftwareLangDetails = pkg('list');
-                Fitprovenance.EstimationSoftwareLangDetails.More = octave_config_info;
                 
             else 
 
