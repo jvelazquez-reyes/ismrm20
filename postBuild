@@ -3,8 +3,8 @@ cd /tmp
 
 # Download qMRLab 2b2b9d
 # BIDS module is available with this hash 
-git clone -b savenii_minorfix https://github.com/qMRLab/qMRLab.git --depth 1
-#git reset --hard 2b2b9d82d2138d85076948632483573aa9ff748a
+git clone -b master https://github.com/qMRLab/qMRLab.git --depth 1
+#git reset --hard c19eed5325de949231357944e679e79dd74a79fa
 
 # Download example dataset  
 wget -O data.zip https://osf.io/4fztd/download/
