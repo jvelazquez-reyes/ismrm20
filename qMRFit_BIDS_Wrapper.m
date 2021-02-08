@@ -60,11 +60,10 @@ if strcmp(protomapper.routeAction,'merge')
 
 % ---------------------------------------------- DATA START  
 
-tmp = load_nii_data(nii_array{1});
-sz = size(tmp);
-DATA = [];
+sample = load_nii_data(nii_array{1});
+sz = size(sample);
 
-if ndims(tmp)==2
+if ndims(sample)==2
     
     if strcmp(protomapper.singleton,'1')
         DATA = zeros(sz(1),sz(2),1,length(nii_array));
@@ -72,7 +71,7 @@ if ndims(tmp)==2
         DATA = zeros(sz(1),sz(2),length(nii_array));
     end
     
-elseif ndims(tmp)==3
+elseif ndims(sample)==3
     
     DATA = zeros(sz(1),sz(2),sz(3),length(nii_array));
 else
@@ -83,7 +82,7 @@ end
 for ii=1:length(nii_array)
     
     
-    if ndims(tmp)==2   && ~strcmp(protomapper.singleton,'1')
+    if ndims(sample)==2   && ~strcmp(protomapper.singleton,'1')
         DATA(:,:,ii) =  double(load_nii_data(nii_array{ii}));
     else
         DATA(:,:,:,ii) =  double(load_nii_data(nii_array{ii}));
@@ -95,7 +94,7 @@ end
 
 data = struct(); 
 data.(protomapper.dataFieldName) = DATA;
-clear('tmp','DATA'); 
+clear('sample','DATA'); 
 % ---------------------------------------------- DATA END 
 if ~isstruct(json_array)
     
@@ -106,25 +105,22 @@ end
 
 
 params = setxor('foreach',fieldnames(protomapper.protMap)); 
-
-for ii=1:length(params)
-    
-    cur_param = cell2mat(params(ii));
-    
-    if strcmp(protomapper.protMap.(cur_param).order,'col_first')
-   
-    Model.Prot.(protomapper.protMap.(cur_param).qMRLabProt).Mat(:,ii) = ...
-    [json_array(:).(cur_param)].*protomapper.protMap.(cur_param).scale;
-    
-    else
+qLen = length(nii_array);
+for jj=1:qLen
+    for ii=1:length(params)
         
-    Model.Prot.(protomapper.protMap.(cur_param).qMRLabProt).Mat(ii,:) = ...
-    [json_array(:).(cur_param)].*protomapper.protMap.(cur_param).scale;
+        cur_param = cell2mat(params(ii));
 
+        Model.Prot.(protomapper.protMap.(cur_param).qMRLabProt).Mat(jj,ii) = ...
+        getfield(json2struct(json_array{jj}),params{ii});
     end
 end
 
-
+%Account for optional inputs and options
+if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
+if ~isempty(p.Results.b1map); data.B1map = double(load_nii_data(p.Results.b1map)); end
+if ~isempty(p.Results.b1factor); Model.options.B1correction = p.Results.b1factor; end
+if ~isempty(p.Results.sid); SID = p.Results.sid; end
 
 % ==================================================
 elseif strcmp(protomapper.routeAction,'distribute')
@@ -141,17 +137,83 @@ end
 % FITTING 
 % ===============================================================
              
-%disp(['Fitting ' Model.ModelName ' for ' 'sub-' BIDS_subjects{sub_iter} cell2mat(extra) ' ' extras{extra_iter}])
 FitResults = FitData(data,Model,0);
-             
-             
+
+outputs = fieldnames(protomapper.outputMap); 
+for ii=1:length(outputs)
+    
+    cur_output = cell2mat(outputs(ii));
+    
+    % ==== Weed out spurious values ==== 
+
+    % Zero-out Inf values (caused by masking)
+    FitResults.(cur_output)(FitResults.(cur_output)==Inf)=0;
+    % Null-out negative values 
+    FitResults.(cur_output)(FitResults.(cur_output)<0)=NaN;
+
+end
+
+% ==== Save outputs ==== 
+disp('-----------------------------');
+disp('Saving fit results...');
+
 FitResultsSave_nii(FitResults,nii_array{1},pwd);
-renameMapsSaveJsons(BIDS,files,BIDS_subjects{sub_iter},curSubDir,protomapper,Model.xnames,cell2mat(extra),extras{extra_iter});
-   
-             % FIT HERE BUT MANAGE OUTPUT FOLDERS AND OUTPUT NAMES PROPERLY
-             % YOU NEED TO CREATE DERIVATIVES FOLDER/SUBJECT/qMRLab 
-             %
+
+% Save qMRLab object
+if ~isempty(SID)
+    Model.saveObj([SID protomapper.qMRLabModel '.qmrlab.mat']);
+else
+    Model.saveObj([protomapper.qMRLabModel '.qmrlab.mat']);
+end
+
+% Remove FitResults.mat 
+delete('FitResults.mat');
+
+% JSON files for quantitative map(s)
+addField = struct();
+addField.EstimationReference =  protomapper.estimationPaper;
+addField.EstimationAlgorithm =  protomapper.estimationAlgorithm;
+addField.BasedOn = [{nii_array},{jsn_array}];
+
+provenance = Model.getProvenance('extra',addField);
+
+for ii=1:length(outputs)
+      
+    if ~isempty(SID)
         
+        % ==== Rename outputs ==== 
+        movefile([outputs(ii) '.nii.gz'],[SID '_' outputs(ii) 'map.nii.gz']);
+        % ==== Save JSON provenance ==== 
+        savejson('',provenance,[pwd filesep SID '_' outputs(ii) 'map.json']);
+    else
+        movefile([outputs(ii) '.nii.gz'],[outputs(ii) 'map.nii.gz']);
+        savejson('',provenance,[pwd filesep outputs(ii) 'map.json']);
+    end
+   
+end
+
+% JSON file for dataset_description
+addDescription = struct();
+addDescription.Name = 'qMRLab Outputs';
+addDescription.BIDSVersion = '1.5.0';
+addDescription.DatasetType = 'derivative';
+addDescription.GeneratedBy.Name = 'qMRLab';
+addDescription.GeneratedBy.Version = qMRLabVer();
+addDescription.GeneratedBy.Container.Type = p.Results.containerType;
+if ~strcmp(p.Results.containerTag,'null'); addDescription.GeneratedBy.Container.Tag = p.Results.containerTag; end
+addDescription.GeneratedBy.Name2 = 'Manual';
+addDescription.GeneratedBy.Description = p.Results.description;
+if ~isempty(p.Results.datasetDOI); addDescription.SourceDatasets.DOI = p.Results.datasetDOI; end
+if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
+if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
+
+savejson('',addDescription,[pwd filesep 'dataset_description.json']);
+
+if moxunit_util_platform_is_octave
+    warning('on','all');
+end            
+             
+
 end
 
 function protomapper = getMapper(cur_type)
@@ -174,9 +236,25 @@ function protomapper = getMapper(cur_type)
 
 end
 
-function [Model,data] = qMRLabBIDSmapper(datas,metas,protomapper)
+function out = json2struct(filename)
 
+tmp = loadjson(filename);
 
+if isstruct(tmp)
 
+    out = tmp;
+
+else
+
+    str = cell2struct(tmp,'tmp');
+    out = [str.tmp];
+
+end
+
+end 
+
+function qmr_init(qmrdir)
+
+run([qmrdir filesep 'startup.m']);
 
 end
