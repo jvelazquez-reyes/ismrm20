@@ -1,0 +1,36 @@
+
+{
+	"BIDSSuffix": "MTSAT",
+	"qMRLabModel": "mt_sat",
+	"REQUIREDEntities": "mt",
+	"routeAction": "distribute",
+	"singleton": "1",
+	"dataFieldName": ["MTw" "PDw" "T1w"],
+	"protMap": {
+		
+		"foreach": "mt",
+		
+		"FlipAngle":{
+		"qMRLabProt": ["MTw" "PDw" "T1w"],
+		"scale": 1,
+		"order": "col_first",
+		"index": "1"
+		},
+		
+		"RepetitionTimeExcitation":{
+		"qMRLabProt": ["MTw" "PDw" "T1w"],
+		"scale": 0.001,
+		"order": "col_first",
+		"index": "2"
+		}
+	},
+	"outputMap": {
+		"MTSAT": "MTsat",
+		"T1": "T1map"
+	},
+
+	"estimationPaper": "Helms, G. et al. (2008). Magn Reson Med 60:1396-1407.",
+	"estimationAlgorithm": "src/Models_Functions/MTSATfun/MTSAT_exec.m"
+   
+
+}
