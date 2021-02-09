@@ -50,6 +50,7 @@ protomapper = getMapper(qMR_suffix);
 % ================== Instantiate qMRLab object 
 
 eval(['Model=' protomapper.qMRLabModel ';']);
+data = struct(); 
 
 % =================== DATA START 
 
@@ -58,7 +59,7 @@ eval(['Model=' protomapper.qMRLabModel ';']);
 
 if strcmp(protomapper.routeAction,'merge')
 
-% ---------------------------------------------- DATA START  
+% ---- DATA START  
 
 sample = load_nii_data(nii_array{1});
 sz = size(sample);
@@ -91,17 +92,15 @@ for ii=1:length(nii_array)
     
 end
 
-
-data = struct(); 
 data.(protomapper.dataFieldName) = DATA;
 clear('sample','DATA'); 
 % ---------------------------------------------- DATA END 
-if ~isstruct(json_array)
-    
-    str = cell2struct(json_array,'tmp');
-    json_array = [str.tmp];
-
-end
+% if ~isstruct(json_array)
+%     
+%     str = cell2struct(json_array,'tmp');
+%     json_array = [str.tmp];
+% 
+% end
 
 
 params = setxor('foreach',fieldnames(protomapper.protMap)); 
@@ -129,7 +128,37 @@ elseif strcmp(protomapper.routeAction,'distribute')
 % ROUTE ACTION: DISTRIBUTE 
 % ===============================================================
 
-% TODO: For other models like mt_sat, we'll distribute data. 
+input_data = fieldnames(protomapper.dataFieldName);
+qLen = length(nii_array);
+for ii=1:qLen
+    cur_data = cell2mat(input_data{ii});
+    data.(cur_data) = nii_array{ii};
+end
+% ----------- DATA END 
+% if ~isstruct(json_array)
+%     
+%     str = cell2struct(json_array,'tmp');
+%     json_array = [str.tmp];
+% 
+% end
+
+params = setxor('foreach',fieldnames(protomapper.protMap)); 
+for jj=1:length(params)
+    
+    cur_param = cell2mat(params(jj));
+        
+    for ii=1:length(protomapper.protMap.(cur_param).qMRLabProt)
+        
+        Model.Prot.(protomapper.protMap.(cur_param).qMRLabProt{ii}).Mat(1,jj) = ...
+        getfield(json2struct(json_array{ii}),params{jj});
+    end
+end
+
+%Account for optional inputs and options
+if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
+if ~isempty(p.Results.b1map); data.B1map = double(load_nii_data(p.Results.b1map)); end
+if ~isempty(p.Results.b1factor); Model.options.B1correction = p.Results.b1factor; end
+if ~isempty(p.Results.sid); SID = p.Results.sid; end
 
 end
 
