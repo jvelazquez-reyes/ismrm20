@@ -1,9 +1,9 @@
-function qMRFit_BIDS_Wrapper(nii_array, json_array, varargin)
+function qMRFit_BIDS_Wrapper(nii_array, json_array, qMR_suffix, varargin)
 
-% Supress verbose Octave warnings.
-%if moxunit_util_platform_is_octave
+% % Supress verbose Octave warnings.
+% if moxunit_util_platform_is_octave
 %    warning('off','all');
-%end
+% end
 
 % This env var will be consumed by qMRLab
 setenv('ISNEXTFLOW','1');
@@ -128,11 +128,11 @@ elseif strcmp(protomapper.routeAction,'distribute')
 % ROUTE ACTION: DISTRIBUTE 
 % ===============================================================
 
-input_data = fieldnames(protomapper.dataFieldName);
+input_data = protomapper.dataFieldName;
 qLen = length(nii_array);
 for ii=1:qLen
     cur_data = cell2mat(input_data{ii});
-    data.(cur_data) = nii_array{ii};
+    data.(cur_data) = double(load_nii_data(nii_array{ii}));
 end
 % ----------- DATA END 
 % if ~isstruct(json_array)
@@ -189,8 +189,8 @@ disp('Saving fit results...');
 FitResultsSave_nii(FitResults,nii_array{1},pwd);
 
 % Save qMRLab object
-if ~isempty(SID)
-    Model.saveObj([SID protomapper.qMRLabModel '.qmrlab.mat']);
+if ~isempty(p.Results.sid)
+    Model.saveObj([SID '_' protomapper.qMRLabModel '.qmrlab.mat']);
 else
     Model.saveObj([protomapper.qMRLabModel '.qmrlab.mat']);
 end
@@ -202,21 +202,23 @@ delete('FitResults.mat');
 addField = struct();
 addField.EstimationReference =  protomapper.estimationPaper;
 addField.EstimationAlgorithm =  protomapper.estimationAlgorithm;
-addField.BasedOn = [{nii_array},{jsn_array}];
+addField.BasedOn = [{nii_array},{json_array}];
 
 provenance = Model.getProvenance('extra',addField);
 
 for ii=1:length(outputs)
-      
-    if ~isempty(SID)
+    
+    cur_output = cell2mat(outputs(ii));
+    rename_output = protomapper.outputMap.(cur_output);
+    if ~isempty(p.Results.sid)
         
         % ==== Rename outputs ==== 
-        movefile([outputs(ii) '.nii.gz'],[SID '_' outputs(ii) 'map.nii.gz']);
+        movefile([cur_output '.nii.gz'],[SID '_' rename_output '.nii.gz']);
         % ==== Save JSON provenance ==== 
-        savejson('',provenance,[pwd filesep SID '_' outputs(ii) 'map.json']);
+        savejson('',provenance,[pwd filesep SID '_' rename_output '.json']);
     else
-        movefile([outputs(ii) '.nii.gz'],[outputs(ii) 'map.nii.gz']);
-        savejson('',provenance,[pwd filesep outputs(ii) 'map.json']);
+        movefile([cur_output '.nii.gz'],[rename_output '.nii.gz']);
+        savejson('',provenance,[pwd filesep rename_output '.json']);
     end
    
 end
@@ -238,9 +240,7 @@ if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p
 
 savejson('',addDescription,[pwd filesep 'dataset_description.json']);
 
-if moxunit_util_platform_is_octave
-    warning('on','all');
-end            
+          
              
 
 end
@@ -249,17 +249,17 @@ function protomapper = getMapper(cur_type)
  % For each type defined in qMRLab, there is a protocol mapper 
  % called <subffix>_BIDSmapper.json under src/common/BIDS_protomaps 
     
-        qmrTypeList = dir(fullfile('./BIDS_protomaps', '*.json'));
+        qmrTypeList = dir(fullfile('/usr/local/qMRLab/datasets/Wrapper/ismrm20/BIDS_protomaps', '*.json'));
         tmp = struct2cell(qmrTypeList); % Cell matrix
         qmrTypeList = tmp(1,:); % Cell array, 1st index is "name" field
         % Check if the current type is defined within qMRLab 
         
         if ismember([cur_type '.json'],qmrTypeList)
             
-            protomapper = json2struct(['./BIDS_protomaps/' cur_type '.json']);
+            protomapper = json2struct(['/usr/local/qMRLab/datasets/Wrapper/ismrm20/BIDS_protomaps/' cur_type '.json']);
         else
             protomapper = [];
-            disp(['Protocol' cur_type 'not available'])
+            disp(['Protocol ' cur_type ' not available'])
         end
             
 
