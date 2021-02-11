@@ -249,14 +249,14 @@ function protomapper = getMapper(cur_type)
  % For each type defined in qMRLab, there is a protocol mapper 
  % called <subffix>_BIDSmapper.json under src/common/BIDS_protomaps 
     
-        qmrTypeList = dir(fullfile('/usr/local/qMRLab/datasets/Wrapper/ismrm20/BIDS_protomaps', '*.json'));
+        qmrTypeList = dir(fullfile('./ismrm20/BIDS_protomaps', '*.json'));
         tmp = struct2cell(qmrTypeList); % Cell matrix
         qmrTypeList = tmp(1,:); % Cell array, 1st index is "name" field
         % Check if the current type is defined within qMRLab 
         
         if ismember([cur_type '.json'],qmrTypeList)
             
-            protomapper = json2struct(['/usr/local/qMRLab/datasets/Wrapper/ismrm20/BIDS_protomaps/' cur_type '.json']);
+            protomapper = json2struct(['./ismrm20/BIDS_protomaps/' cur_type '.json']);
         else
             protomapper = [];
             disp(['Protocol ' cur_type ' not available'])
