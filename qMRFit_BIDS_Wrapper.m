@@ -19,6 +19,10 @@ validB1factor = @(x) isnumeric(x) && (x > 0 && x <= 1);
 addParameter(p,'mask',[],validNii);
 addParameter(p,'b1map',[],validNii);
 addParameter(p,'b1factor',[],validB1factor);
+addParameter(p,'type',[],@ischar);
+addParameter(p,'order',[],@isnumeric);
+addParameter(p,'dimension',[],@ischar);
+addParameter(p,'size',[],@ismatrix);
 addParameter(p,'qmrlab_path',[],@ischar);
 addParameter(p,'sid',[],@ischar);
 addParameter(p,'containerType',@ischar);
@@ -103,15 +107,16 @@ clear('sample','DATA');
 % end
 
 
-params = setxor('foreach',fieldnames(protomapper.protMap)); 
-qLen = length(nii_array);
-for jj=1:qLen
-    for ii=1:length(params)
-        
-        cur_param = cell2mat(params(ii));
-
-        Model.Prot.(protomapper.protMap.(cur_param).qMRLabProt).Mat(jj,ii) = ...
-        getfield(json2struct(json_array{jj}),params{ii});
+fields = setxor('foreach',fieldnames(protomapper.protMap));
+qLen = length(json_array);
+for kk=1:length(fields)
+    cur_field = cell2mat(fields(kk));
+    for jj=1:length(protomapper.protMap.(cur_field).qMRLabProt)
+        params = protomapper.protMap.(cur_field).qMRLabProt;
+        for ii=1:qLen
+            Model.Prot.(cur_field).Mat(ii,jj) = ...
+        getfield(json2struct(json_array{ii}),params{jj});
+        end
     end
 end
 
@@ -159,6 +164,14 @@ if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); 
 if ~isempty(p.Results.b1map); data.B1map = double(load_nii_data(p.Results.b1map)); end
 if ~isempty(p.Results.b1factor); Model.options.B1correction = p.Results.b1factor; end
 if ~isempty(p.Results.sid); SID = p.Results.sid; end
+if ~isempty(p.Results.type); Model.options.Smoothingfilter_Type = p.Results.type; end
+if ~isempty(p.Results.order); Model.options.Smoothingfilter_order = p.Results.order; end
+if ~isempty(p.Results.dimension); Model.options.Smoothingfilter_dimension = p.Results.dimension; end
+if ~isempty(p.Results.size)
+    Model.options.Smoothingfilter_sizex = p.Results.size(1);
+    Model.options.Smoothingfilter_sizey = p.Results.size(2);
+    Model.options.Smoothingfilter_sizez = p.Results.size(3);
+end
 
 end
 

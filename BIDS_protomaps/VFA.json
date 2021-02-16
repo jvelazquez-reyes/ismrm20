@@ -10,18 +10,11 @@
 		
 		"foreach": "fa",
 		
-		"FlipAngle":{
-		"qMRLabProt": "VFAData",
-		"scale": 1,
+		"VFAData":{
+		"qMRLabProt": ["FlipAngle" "RepetitionTimeExcitation"],
+		"scale": [1 0.001],
 		"order": "col_first",
 		"index": "1"
-		},
-		
-		"RepetitionTimeExcitation":{
-		"qMRLabProt": "VFAData",
-		"scale": 0.001,
-		"order": "col_first",
-		"index": "2"
 		}
 	},
 	"outputMap": {
