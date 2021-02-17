@@ -11,7 +11,7 @@
 		"foreach": "mt",
 		
 		"MTw":{
-		"qMRLabProt": ["FlipAngle" "RepetitionTimeExcitation" "T1w"],
+		"qMRLabProt": ["FlipAngle" "RepetitionTimeExcitation"],
 		"scale": [1 0.001],
 		"fillProtBy": "parameter",
 		"index": "1"

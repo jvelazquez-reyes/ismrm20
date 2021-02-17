@@ -148,16 +148,17 @@ for kk=1:length(fields)
 cur_field = cell2mat(fields(kk));
 
 if strcmp(protomapper.protMap.(cur_field).fillProtBy, 'files')
-    while kk<=length(fields)
     cur_field = cell2mat(fields(kk));
-    for jj=1:length(protomapper.protMap.(cur_field).qMRLabProt)
-        params = protomapper.protMap.(cur_field).qMRLabProt;
+    params = protomapper.protMap.(cur_field).qMRLabProt;
+    for jj=1:length(params)
         for ii=1:qLen
-            Model.Prot.(cur_field).Mat(ii,jj) = ...
-        getfield(json2struct(json_array{ii}),params{jj});
+            if isfield(json2struct(json_array{ii}), params{jj})
+                Model.Prot.(cur_field).Mat(ii,jj) = ...
+                    getfield(json2struct(json_array{ii}),params{jj});
+            else
+                disp('No parameter found')
+            end
         end
-    end
-    kk = kk + 1;
     end
 end
 
@@ -165,18 +166,19 @@ if strcmp(protomapper.protMap.(cur_field).fillProtBy, 'parameter')
     cur_field = cell2mat(fields(kk));
     params = protomapper.protMap.(cur_field).qMRLabProt;
     count = 1;
-    jj = 1;
-    while count ~= length(params) + 1
-        for ii=1:length(protomapper.protMap.(cur_field).qMRLabProt)
+    if kk==1; jj=1; end
+    while count < length(params) + 1
+        for ii=1:length(params)
             if isfield(json2struct(json_array{jj}), params{ii})
                 Model.Prot.(cur_field).Mat(count) = ...
                     getfield(json2struct(json_array{jj}),params{ii});
+                if ((count ~= length(params) + 1) && (count == length(fieldnames(json2struct(json_array{jj})))))
+                    jj = jj + 1;
+                end
                 count = count + 1;
-            end
-            
-            if ((count ~= length(params) + 1) && (count == length(fieldnames(json2struct(json_array{jj})))))
-                jj = jj + 1;
-            end
+            else
+                disp('No parameter found')
+            end 
         end           
     end
 end

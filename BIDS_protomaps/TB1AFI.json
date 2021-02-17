@@ -11,7 +11,7 @@
 		"foreach": "flip",
 		
 		"Sequence":{
-		"qMRLabProt": ["nominalFLipAngle" "RepetitionTimeExcitation1" "RepetitionTimeExcitation2"],
+		"qMRLabProt": ["nominalFlipAngle" "RepetitionTimeExcitation1" "RepetitionTimeExcitation2"],
 		"scale": [1 0.001 0.001],
 		"fillProtBy": "parameter",
 		"index": "1"
