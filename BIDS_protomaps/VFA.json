@@ -13,7 +13,7 @@
 		"VFAData":{
 		"qMRLabProt": ["FlipAngle" "RepetitionTimeExcitation"],
 		"scale": [1 0.001],
-		"order": "col_first",
+		"fillProtBy": "files",
 		"index": "1"
 		}
 	},

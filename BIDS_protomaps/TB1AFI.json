@@ -1,0 +1,28 @@
+
+{
+	"BIDSSuffix": "TB1AFI",
+	"qMRLabModel": "b1_afi",
+	"REQUIREDEntities": "tr",
+	"routeAction": "distribute",
+	"singleton": "1",
+	"dataFieldName": ["AFIData1" "AFIData2"],
+	"protMap": {
+		
+		"foreach": "flip",
+		
+		"Sequence":{
+		"qMRLabProt": ["nominalFLipAngle" "RepetitionTimeExcitation1" "RepetitionTimeExcitation2"],
+		"scale": [1 0.001 0.001],
+		"fillProtBy": "parameter",
+		"index": "1"
+		}
+	},
+	"outputMap": {
+		"B1map_raw": "TB1map"
+	},
+
+	"estimationPaper": "Yarnykh, V.L., et al. (2007). Magn Reson Med 57:192-200.",
+	"estimationAlgorithm": "src/Models/FieldMaps/b1_afi.m"
+   
+
+}

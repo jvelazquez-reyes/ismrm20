@@ -1,6 +1,6 @@
 
 {
-	"BIDSSuffix": "MTSAT",
+	"BIDSSuffix": "MTS",
 	"qMRLabModel": "mt_sat",
 	"REQUIREDEntities": "mt",
 	"routeAction": "distribute",
@@ -10,17 +10,24 @@
 		
 		"foreach": "mt",
 		
-		"FlipAngle":{
-		"qMRLabProt": ["MTw" "PDw" "T1w"],
-		"scale": 1,
-		"order": "col_first",
+		"MTw":{
+		"qMRLabProt": ["FlipAngle" "RepetitionTimeExcitation" "T1w"],
+		"scale": [1 0.001],
+		"fillProtBy": "parameter",
 		"index": "1"
 		},
 		
-		"RepetitionTimeExcitation":{
-		"qMRLabProt": ["MTw" "PDw" "T1w"],
-		"scale": 0.001,
-		"order": "col_first",
+		"PDw":{
+		"qMRLabProt": ["FlipAngle" "RepetitionTimeExcitation"],
+		"scale": [1 0.001],
+		"fillProtBy": "parameter",
+		"index": "2"
+		},
+
+		"T1w":{
+		"qMRLabProt": ["FlipAngle" "RepetitionTimeExcitation"],
+		"scale": [1 0.001],
+		"fillProtBy": "parameter",
 		"index": "2"
 		}
 	},
