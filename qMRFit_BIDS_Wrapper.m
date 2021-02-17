@@ -106,26 +106,6 @@ clear('sample','DATA');
 % 
 % end
 
-
-fields = setxor('foreach',fieldnames(protomapper.protMap));
-qLen = length(json_array);
-for kk=1:length(fields)
-    cur_field = cell2mat(fields(kk));
-    for jj=1:length(protomapper.protMap.(cur_field).qMRLabProt)
-        params = protomapper.protMap.(cur_field).qMRLabProt;
-        for ii=1:qLen
-            Model.Prot.(cur_field).Mat(ii,jj) = ...
-        getfield(json2struct(json_array{ii}),params{jj});
-        end
-    end
-end
-
-%Account for optional inputs and options
-if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
-if ~isempty(p.Results.b1map); data.B1map = double(load_nii_data(p.Results.b1map)); end
-if ~isempty(p.Results.b1factor); Model.options.B1correction = p.Results.b1factor; end
-if ~isempty(p.Results.sid); SID = p.Results.sid; end
-
 % ==================================================
 elseif strcmp(protomapper.routeAction,'distribute')
     
@@ -147,16 +127,59 @@ end
 % 
 % end
 
-params = setxor('foreach',fieldnames(protomapper.protMap)); 
-for jj=1:length(params)
-    
-    cur_param = cell2mat(params(jj));
-        
-    for ii=1:length(protomapper.protMap.(cur_param).qMRLabProt)
-        
-        Model.Prot.(protomapper.protMap.(cur_param).qMRLabProt{ii}).Mat(1,jj) = ...
+% params = setxor('foreach',fieldnames(protomapper.protMap)); 
+% for jj=1:length(params)
+%     
+%     cur_param = cell2mat(params(jj));
+%         
+%     for ii=1:length(protomapper.protMap.(cur_param).qMRLabProt)
+%         
+%         Model.Prot.(protomapper.protMap.(cur_param).qMRLabProt{ii}).Mat(1,jj) = ...
+%         getfield(json2struct(json_array{ii}),params{jj});
+%     end
+% end
+
+end
+
+%Set Model.Protocol
+fields = setxor('foreach',fieldnames(protomapper.protMap));
+qLen = length(json_array);
+for kk=1:length(fields)
+cur_field = cell2mat(fields(kk));
+
+if strcmp(protomapper.protMap.(cur_field).fillProtBy, 'files')
+    while kk<=length(fields)
+    cur_field = cell2mat(fields(kk));
+    for jj=1:length(protomapper.protMap.(cur_field).qMRLabProt)
+        params = protomapper.protMap.(cur_field).qMRLabProt;
+        for ii=1:qLen
+            Model.Prot.(cur_field).Mat(ii,jj) = ...
         getfield(json2struct(json_array{ii}),params{jj});
+        end
     end
+    kk = kk + 1;
+    end
+end
+
+if strcmp(protomapper.protMap.(cur_field).fillProtBy, 'parameter')
+    cur_field = cell2mat(fields(kk));
+    params = protomapper.protMap.(cur_field).qMRLabProt;
+    count = 1;
+    jj = 1;
+    while count ~= length(params) + 1
+        for ii=1:length(protomapper.protMap.(cur_field).qMRLabProt)
+            if isfield(json2struct(json_array{jj}), params{ii})
+                Model.Prot.(cur_field).Mat(count) = ...
+                    getfield(json2struct(json_array{jj}),params{ii});
+                count = count + 1;
+            end
+            
+            if ((count ~= length(params) + 1) && (count == length(fieldnames(json2struct(json_array{jj})))))
+                jj = jj + 1;
+            end
+        end           
+    end
+end
 end
 
 %Account for optional inputs and options
@@ -171,8 +194,6 @@ if ~isempty(p.Results.size)
     Model.options.Smoothingfilter_sizex = p.Results.size(1);
     Model.options.Smoothingfilter_sizey = p.Results.size(2);
     Model.options.Smoothingfilter_sizez = p.Results.size(3);
-end
-
 end
 
 % ===============================================================
