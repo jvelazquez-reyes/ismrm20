@@ -1,4 +1,45 @@
-function qMRFit_BIDS(inputDir)
+function qMRFit_BIDS(inputDir, varargin)
+
+p = inputParser();
+
+%Input parameters conditions
+validNii = @(x) exist(x,'file') && strcmp(x(end-5:end),'nii.gz');
+validJsn = @(x) exist(x,'file') && strcmp(x(end-3:end),'json');
+validB1factor = @(x) isnumeric(x) && (x > 0 && x <= 1);
+
+%Add OPTIONAL Parameteres
+addParameter(p,'mask',[],validNii);
+addParameter(p,'b1map',[],validNii);
+addParameter(p,'b1factor',[],validB1factor);
+addParameter(p,'type',[],@ischar);
+addParameter(p,'order',[],@isnumeric);
+addParameter(p,'dimension',[],@ischar);
+addParameter(p,'size',[],@ismatrix);
+addParameter(p,'qmrlab_path',[],@ischar);
+addParameter(p,'sid',[],@ischar);
+addParameter(p,'containerType',@ischar);
+addParameter(p,'containerTag',[],@ischar);
+addParameter(p,'description',@ischar);
+addParameter(p,'datasetDOI',[],@ischar);
+addParameter(p,'datasetURL',[],@ischar);
+addParameter(p,'datasetVersion',[],@ischar);
+
+parse(p,varargin{:});
+
+if ~isempty(p.Results.qmrlab_path); qMRdir = p.Results.qmrlab_path; end
+
+try
+    disp('=============================');
+    qMRLabVer;
+catch
+    warning('Cant find qMRLab. Adding qMRLab_DIR to the path: ');
+    if ~strcmp(qMRdir,'null')
+        qmr_init(qMRdir);
+    else
+        error('Please set qMRLab_DIR parameter in the nextflow.config file.');
+    end
+    qMRLabVer();
+end
 
 try
     BIDS = bids.layout(inputDir);
@@ -47,26 +88,76 @@ for sub_iter = 1:length(BIDS_subjects)
              files = bids.query(BIDS,'data','sub',BIDS_subjects(sub_iter),cell2mat(extra),extras(extra_iter),'type',BIDS_types(type_iter));
              metas = bids.query(BIDS,'metadata','sub',BIDS_subjects(sub_iter),cell2mat(extra),extras(extra_iter),'type',BIDS_types(type_iter));
              
-             [Model,data] = qMRLabBIDSmapper(files,metas,protomapper);
+             [Model,data] = qMRLabBIDSmapper(files,metas,protomapper, p);
              
              disp(['Fitting ' Model.ModelName ' for ' 'sub-' BIDS_subjects{sub_iter} cell2mat(extra) ' ' extras{extra_iter}])
-             FitResults = FitData(data,Model,0);
-             
-             
-             FitResultsSave_nii(FitResults,files{1},curSubDir);
-             renameMapsSaveJsons(BIDS,files,BIDS_subjects{sub_iter},curSubDir,protomapper,Model.xnames,cell2mat(extra),extras{extra_iter});
-             
-             
-             % FIT HERE BUT MANAGE OUTPUT FOLDERS AND OUTPUT NAMES PROPERLY
-             % YOU NEED TO CREATE DERIVATIVES FOLDER/SUBJECT/qMRLab 
-             %
-             
+
          end
          
         else
             
-            % TODO: Put 47-52 into a function and manage here as well. 
+            files = bids.query(BIDS,'data','sub',BIDS_subjects(sub_iter),'type',BIDS_types(type_iter));
+            metas = bids.query(BIDS,'metadata','sub',BIDS_subjects(sub_iter),'type',BIDS_types(type_iter));
+            
+            [Model,data] = qMRLabBIDSmapper(files,metas,protomapper, p);
+            
+            disp(['Fitting ' Model.ModelName ' for ' 'sub-' BIDS_subjects{sub_iter} ]) 
         end
+        
+        FitResults = FitData(data,Model,0);
+        
+        outputs = fieldnames(protomapper.outputMap);
+        for ii=1:length(outputs)
+            
+            cur_output = cell2mat(outputs(ii));
+            
+            % ==== Weed out spurious values ====
+            
+            % Zero-out Inf values (caused by masking)
+            FitResults.(cur_output)(FitResults.(cur_output)==Inf)=0;
+            % Null-out negative values
+            FitResults.(cur_output)(FitResults.(cur_output)<0)=NaN;
+                 
+        end
+         
+        % ==== Save outputs ==== 
+        disp('-----------------------------');
+        disp('Saving fit results...');
+            
+        FitResultsSave_nii(FitResults,files{1},curSubDir);
+             
+        % Save qMRLab object
+        if ~isempty(p.Results.sid)
+            Model.saveObj([SID '_' protomapper.qMRLabModel '.qmrlab.mat']);
+        else
+            Model.saveObj([protomapper.qMRLabModel '.qmrlab.mat']);
+        end
+        
+        % Remove FitResults.mat
+        delete('FitResults.mat');
+             
+        % JSON files for quantitative map(s)
+        addField = struct();
+        addField.EstimationReference =  protomapper.estimationPaper;
+        addField.EstimationAlgorithm =  protomapper.estimationAlgorithm;
+        addField.BasedOn = [{files},{metas{:}}];
+             
+        provenance = Model.getProvenance('extra',addField);
+             
+             for ii=1:length(outputs)
+                 cur_output = cell2mat(outputs(ii));
+                 rename_output = protomapper.outputMap.(cur_output);
+                 if ~isempty(p.Results.sid)
+                     % ==== Rename outputs ====
+                     movefile([cur_output '.nii.gz'],[SID '_' rename_output '.nii.gz']);
+                     % ==== Save JSON provenance ==== 
+                     savejson('',provenance,[pwd filesep SID '_' rename_output '.json']);
+                 else
+                     movefile([cur_output '.nii.gz'],[rename_output '.nii.gz']);
+                     savejson('',provenance,[pwd filesep rename_output '.json']);
+                 end
+             end
+             %renameMapsSaveJsons(BIDS,files,BIDS_subjects{sub_iter},curSubDir,protomapper,Model.xnames,cell2mat(extra),extras{extra_iter});
        
        end
 
@@ -114,7 +205,7 @@ function extra = checkExtraEntities(BIDS,protomapper,sub_iter,cur_type)
   
 end
 
-function [Model,data] = qMRLabBIDSmapper(datas,metas,protomapper)
+function [Model,data] = qMRLabBIDSmapper(datas,metas,protomapper, p)
 
 
 % ================== Instantiate qMRLab object 
@@ -128,13 +219,12 @@ eval(['Model=' protomapper.qMRLabModel ';']);
 
 if strcmp(protomapper.routeAction,'merge')
 
-% ---------------------------------------------- DATA START  
+% ---- DATA START  
 
-tmp = load_nii_data(datas{1});
-sz = size(tmp);
-DATA = [];
+sample = load_nii_data(datas{1});
+sz = size(sample);
 
-if ndims(tmp)==2
+if ndims(sample)==2
     
     if strcmp(protomapper.singleton,'1')
         DATA = zeros(sz(1),sz(2),1,length(datas));
@@ -142,7 +232,7 @@ if ndims(tmp)==2
         DATA = zeros(sz(1),sz(2),length(datas));
     end
     
-elseif ndims(tmp)==3
+elseif ndims(sample)==3
     
     DATA = zeros(sz(1),sz(2),sz(3),length(datas));
 else
@@ -153,7 +243,7 @@ end
 for ii=1:length(datas)
     
     
-    if ndims(tmp)==2   && ~strcmp(protomapper.singleton,'1')
+    if ndims(sample)==2   && ~strcmp(protomapper.singleton,'1')
         DATA(:,:,ii) =  double(load_nii_data(datas{ii}));
     else
         DATA(:,:,:,ii) =  double(load_nii_data(datas{ii}));
@@ -162,39 +252,15 @@ for ii=1:length(datas)
     
 end
 
-
-data = struct(); 
 data.(protomapper.dataFieldName) = DATA;
-clear('tmp','DATA'); 
+clear('sample','DATA'); 
 % ---------------------------------------------- DATA END 
-if ~isstruct(metas)
-    
-    str = cell2struct(metas,'tmp');
-    metas = [str.tmp];
-
-end
-
-
-params = setxor('foreach',fieldnames(protomapper.protMap)); 
-
-for ii=1:length(params)
-    
-    cur_param = cell2mat(params(ii));
-    
-    if strcmp(protomapper.protMap.(cur_param).order,'col_first')
-   
-    Model.Prot.(protomapper.protMap.(cur_param).qMRLabProt).Mat(:,ii) = ...
-    [metas(:).(cur_param)].*protomapper.protMap.(cur_param).scale;
-    
-    else
-        
-    Model.Prot.(protomapper.protMap.(cur_param).qMRLabProt).Mat(ii,:) = ...
-    [metas(:).(cur_param)].*protomapper.protMap.(cur_param).scale;
-
-    end
-end
-
-
+% if ~isstruct(json_array)
+%     
+%     str = cell2struct(json_array,'tmp');
+%     json_array = [str.tmp];
+% 
+% end
 
 % ==================================================
 elseif strcmp(protomapper.routeAction,'distribute')
@@ -203,8 +269,71 @@ elseif strcmp(protomapper.routeAction,'distribute')
 % ROUTE ACTION: DISTRIBUTE 
 % ===============================================================
 
-% TODO: For other models like mt_sat, we'll distribute data. 
+input_data = protomapper.dataFieldName;
+qLen = length(datas);
+for ii=1:qLen
+    cur_data = cell2mat(input_data{ii});
+    data.(cur_data) = double(load_nii_data(datas{ii}));
+end
+% ----------- DATA END 
 
+end
+
+%Set Model.Protocol
+fields = setxor('foreach',fieldnames(protomapper.protMap));
+qLen = length(metas);
+for kk=1:length(fields)
+cur_field = cell2mat(fields(kk));
+
+if strcmp(protomapper.protMap.(cur_field).fillProtBy, 'files')
+    cur_field = cell2mat(fields(kk));
+    params = protomapper.protMap.(cur_field).qMRLabProt;
+    for jj=1:length(params)
+        for ii=1:qLen
+            if isfield(metas{ii}, params{jj})
+                Model.Prot.(cur_field).Mat(ii,jj) = ...
+                    str2double(metas{ii}.(params{jj}));
+            else
+                disp('No parameter found')
+            end
+        end
+    end
+end
+
+if strcmp(protomapper.protMap.(cur_field).fillProtBy, 'parameter')
+    cur_field = cell2mat(fields(kk));
+    params = protomapper.protMap.(cur_field).qMRLabProt;
+    count = 1;
+    if kk==1; jj=1; end
+    while count < length(params) + 1
+        for ii=1:length(params)
+            if isfield(json2struct(metas{jj}), params{ii})
+                Model.Prot.(cur_field).Mat(count) = ...
+                    getfield(json2struct(metas{jj}),params{ii});
+                if ((count ~= length(params) + 1) && (count == length(fieldnames(json2struct(metas{jj})))))
+                    jj = jj + 1;
+                end
+                count = count + 1;
+            else
+                disp('No parameter found')
+            end 
+        end           
+    end
+end
+end
+
+%Account for optional inputs and options
+if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
+if ~isempty(p.Results.b1map); data.B1map = double(load_nii_data(p.Results.b1map)); end
+if ~isempty(p.Results.b1factor); Model.options.B1correction = p.Results.b1factor; end
+if ~isempty(p.Results.sid); SID = p.Results.sid; end
+if ~isempty(p.Results.type); Model.options.Smoothingfilter_Type = p.Results.type; end
+if ~isempty(p.Results.order); Model.options.Smoothingfilter_order = p.Results.order; end
+if ~isempty(p.Results.dimension); Model.options.Smoothingfilter_dimension = p.Results.dimension; end
+if ~isempty(p.Results.size)
+    Model.options.Smoothingfilter_sizex = p.Results.size(1);
+    Model.options.Smoothingfilter_sizey = p.Results.size(2);
+    Model.options.Smoothingfilter_sizez = p.Results.size(3);
 end
 
 end
