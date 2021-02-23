@@ -128,13 +128,13 @@ for sub_iter = 1:length(BIDS_subjects)
              
         % Save qMRLab object
         if ~isempty(p.Results.sid)
-            Model.saveObj([SID '_' protomapper.qMRLabModel '.qmrlab.mat']);
+            Model.saveObj([curSubDir filesep SID '_' protomapper.qMRLabModel '.qmrlab.mat']);
         else
-            Model.saveObj([protomapper.qMRLabModel '.qmrlab.mat']);
+            Model.saveObj([curSubDir filesep protomapper.qMRLabModel '.qmrlab.mat']);
         end
         
         % Remove FitResults.mat
-        delete('FitResults.mat');
+        delete([curSubDir filesep 'FitResults.mat']);
              
         % JSON files for quantitative map(s)
         addField = struct();
@@ -149,12 +149,12 @@ for sub_iter = 1:length(BIDS_subjects)
                  rename_output = protomapper.outputMap.(cur_output);
                  if ~isempty(p.Results.sid)
                      % ==== Rename outputs ====
-                     movefile([cur_output '.nii.gz'],[SID '_' rename_output '.nii.gz']);
+                     movefile([curSubDir filesep cur_output '.nii.gz'],[curSubDir filesep SID '_' rename_output '.nii.gz']);
                      % ==== Save JSON provenance ==== 
-                     savejson('',provenance,[pwd filesep SID '_' rename_output '.json']);
+                     savejson('',provenance,[curSubDir filesep SID '_' rename_output '.json']);
                  else
-                     movefile([cur_output '.nii.gz'],[rename_output '.nii.gz']);
-                     savejson('',provenance,[pwd filesep rename_output '.json']);
+                     movefile([curSubDir filesep cur_output '.nii.gz'],[curSubDir filesep rename_output '.nii.gz']);
+                     savejson('',provenance,[curSubDir filesep rename_output '.json']);
                  end
              end
              %renameMapsSaveJsons(BIDS,files,BIDS_subjects{sub_iter},curSubDir,protomapper,Model.xnames,cell2mat(extra),extras{extra_iter});
