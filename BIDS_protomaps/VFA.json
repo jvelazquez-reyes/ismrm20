@@ -2,13 +2,13 @@
 {
 	"BIDSSuffix": "VFA",
 	"qMRLabModel": "vfa_t1",
-	"REQUIREDEntities": "fa",
+	"REQUIREDEntities": "flip",
 	"routeAction": "merge",
 	"singleton": "1",
 	"dataFieldName": "VFAData",
 	"protMap": {
 		
-		"foreach": "fa",
+		"foreach": "flip",
 		
 		"VFAData":{
 		"qMRLabProt": ["FlipAngle" "RepetitionTimeExcitation"],
