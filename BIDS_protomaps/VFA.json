@@ -2,7 +2,7 @@
 {
 	"BIDSSuffix": "VFA",
 	"qMRLabModel": "vfa_t1",
-	"REQUIREDEntities": "flip",
+	"REQUIREDEntities": ["flip"],
 	"routeAction": "merge",
 	"singleton": "1",
 	"dataFieldName": "VFAData",
