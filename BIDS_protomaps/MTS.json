@@ -2,7 +2,7 @@
 {
 	"BIDSSuffix": "MTS",
 	"qMRLabModel": "mt_sat",
-	"REQUIREDEntities": "mt",
+	"REQUIREDEntities": ["mt" "flip"],
 	"routeAction": "distribute",
 	"singleton": "1",
 	"dataFieldName": ["MTw" "PDw" "T1w"],
