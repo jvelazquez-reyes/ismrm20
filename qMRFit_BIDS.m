@@ -197,7 +197,7 @@ function extra = checkExtraEntities(BIDS,protomapper,sub_iter,cur_type)
           
           idx = not(structfun(@isempty, anat(ii)));
           fnames = fieldnames(anat(ii)); 
-          extra = setxor(fnames(idx),[protomapper.REQUIREDEntities,{'filename'    'ext'    'type'    'sub'}]);
+          extra = setxor(fnames(idx),[protomapper.REQUIREDEntities{:},{'filename'    'ext'    'type'    'sub'}]);
           
       end
       
@@ -307,10 +307,10 @@ if strcmp(protomapper.protMap.(cur_field).fillProtBy, 'parameter')
     if kk==1; jj=1; end
     while count < length(params) + 1
         for ii=1:length(params)
-            if isfield(json2struct(metas{jj}), params{ii})
+            if isfield(metas{jj}, params{ii})
                 Model.Prot.(cur_field).Mat(count) = ...
-                    getfield(json2struct(metas{jj}),params{ii});
-                if ((count ~= length(params) + 1) && (count == length(fieldnames(json2struct(metas{jj})))))
+                    str2double(metas{jj}.(params{ii}));
+                if ((count ~= length(params) + 1) && (count == length(fieldnames(metas{jj}))))
                     jj = jj + 1;
                 end
                 count = count + 1;
