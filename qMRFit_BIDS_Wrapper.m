@@ -154,7 +154,7 @@ if strcmp(protomapper.protMap.(cur_field).fillProtBy, 'files')
         for ii=1:qLen
             if isfield(json2struct(json_array{ii}), params{jj})
                 Model.Prot.(cur_field).Mat(ii,jj) = ...
-                    getfield(json2struct(json_array{ii}),params{jj});
+                    str2double(getfield(json2struct(json_array{ii}),params{jj}));
             else
                 disp('No parameter found')
             end
@@ -171,7 +171,7 @@ if strcmp(protomapper.protMap.(cur_field).fillProtBy, 'parameter')
         for ii=1:length(params)
             if isfield(json2struct(json_array{jj}), params{ii})
                 Model.Prot.(cur_field).Mat(count) = ...
-                    getfield(json2struct(json_array{jj}),params{ii});
+                    str2double(getfield(json2struct(json_array{jj}),params{ii}));
                 if ((count ~= length(params) + 1) && (count == length(fieldnames(json2struct(json_array{jj})))))
                     jj = jj + 1;
                 end
